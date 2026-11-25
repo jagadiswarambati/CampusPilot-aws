@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>CampusPilot: your campus, one app</title>
+  <meta name="description" content="CampusPilot plans your break between classes: attendance, library seats, print shop queues, canteen orders and an AI planning agent, built on AWS.">
+  <meta name="theme-color" content="#ffc400">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%23ffc400%27 stroke=%27%2312181f%27 stroke-width=%272%27/%3E%3Cpath d=%27M7 21l6-10 4 6 8-10%27 stroke=%27%2312181f%27 stroke-width=%273.2%27 fill=%27none%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E">
+  <link rel="preload" href="fonts/barlow-sc-700.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/barlow-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#view">Skip to content</a>
+  <div class="app">
+    <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+      <div class="brand">
+        <span class="mark" aria-hidden="true">CP</span>
+        <span><strong>CampusPilot</strong><small>Your campus, one route</small></span>
+      </div>
+      <p class="route-label" id="route-label">Today's route</p>
+      <nav id="nav" aria-labelledby="route-label"></nav>
+      <div class="me" id="me"></div>
+    </aside>
+    <div class="scrim" id="scrim"></div>
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn burger" id="burger" aria-label="Open menu" aria-controls="sidebar"></button>
+        <span class="top-brand">CampusPilot</span>
+        <div class="crumb"><span class="crumb-dot" aria-hidden="true"></span><span>Campus route</span><span aria-hidden="true">/</span><b id="page-title">Dashboard</b></div>
+        <div class="top-tools">
+          <div class="clock" id="clock"></div>
+          <div class="health" id="health" role="status"></div>
+        </div>
+      </header>
+      <main id="view" tabindex="-1">
+        <noscript><p class="error-card card">CampusPilot needs JavaScript to run.</p></noscript>
+      </main>
+    </div>
+  </div>
+  <div id="toasts" aria-live="polite"></div>
+  <script src="config.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/planner.js"></script>
+  <script src="js/attendance.js"></script>
+  <script src="js/library.js"></script>
+  <script src="js/print.js"></script>
+  <script src="js/canteen.js"></script>
+  <script src="js/orders.js"></script>
+  <script src="js/architecture.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "name": "campuspilot-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node ui_flow.mjs" },
+  "devDependencies": { "jsdom": "^26.0.0" }
+}

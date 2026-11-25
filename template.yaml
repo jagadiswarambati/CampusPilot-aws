@@ -1,0 +1,106 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: CampusPilot AI - serverless campus break planner (API Gateway + Lambda + DynamoDB, optional Bedrock)
+
+Parameters:
+  UseBedrock:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+    Description: Use Amazon Bedrock to understand requests (not covered by the Free Tier; falls back to rules on error)
+  BedrockModelId:
+    Type: String
+    Default: global.amazon.nova-2-lite-v1:0  # check availability for your region in the Bedrock console
+  SafetyBufferMin:
+    Type: Number
+    Default: 5
+
+Conditions:
+  EnableBedrock: !Equals [!Ref UseBedrock, "true"]
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Architectures: [arm64]
+    MemorySize: 256
+    Timeout: 15
+
+Resources:
+  Table:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      # Provisioned 10/10 stays inside the DynamoDB always-free allowance (25 RCU/WCU).
+      BillingMode: PROVISIONED
+      ProvisionedThroughput: {ReadCapacityUnits: 10, WriteCapacityUnits: 10}
+      AttributeDefinitions:
+        - {AttributeName: pk, AttributeType: S}
+        - {AttributeName: sk, AttributeType: S}
+      KeySchema:
+        - {AttributeName: pk, KeyType: HASH}
+        - {AttributeName: sk, KeyType: RANGE}
+      TimeToLiveSpecification: {AttributeName: ttl, Enabled: true}
+
+  Api:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      DefaultRouteSettings: {ThrottlingBurstLimit: 20, ThrottlingRateLimit: 10}
+      CorsConfiguration:
+        AllowOrigins: ["*"]
+        AllowMethods: [GET, POST, OPTIONS]
+        AllowHeaders: [content-type]
+        MaxAge: 600
+
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14   # default is "never expire", which slowly adds cost
+
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      LoggingConfig:
+        LogGroup: !Ref ApiLogGroup
+      CodeUri: backend/src/
+      Handler: app.handler
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref Table
+          USE_BEDROCK: !Ref UseBedrock
+          BEDROCK_MODEL_ID: !Ref BedrockModelId
+          SAFETY_BUFFER_MIN: !Ref SafetyBufferMin
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow   # only what repo.py uses, on this table only
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+                - dynamodb:BatchWriteItem
+                - dynamodb:ConditionCheckItem   # seat booking uses conditional transactions
+              Resource: !GetAtt Table.Arn
+        - !If
+          - EnableBedrock
+          - Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: bedrock:InvokeModel  # also covers the Converse API
+                Resource:                    # cross-region profiles route to models in other regions
+                  - !Sub "arn:${AWS::Partition}:bedrock:*::foundation-model/*"
+                  - !Sub "arn:${AWS::Partition}:bedrock:*:${AWS::AccountId}:inference-profile/*"
+          - !Ref AWS::NoValue
+      Events:
+        Any:  # one catch-all route; app.py routes and validates every path (unknown paths return 404)
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Method: ANY, Path: "/{proxy+}"}
+
+Outputs:
+  ApiUrl:
+    Description: Base URL of the CampusPilot API
+    Value: !Sub "https://${Api}.execute-api.${AWS::Region}.${AWS::URLSuffix}"
+  TableName:
+    Value: !Ref Table
+  LogGroupName:
+    Description: CloudWatch log group of the Lambda (for troubleshooting)
+    Value: !Ref ApiLogGroup

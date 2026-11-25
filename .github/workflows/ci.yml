@@ -1,0 +1,32 @@
+name: CI
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  validate:
+    name: Tests, lint and UI flow test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: pip install -r backend/requirements-dev.txt cfn-lint shellcheck-py
+      - run: shellcheck scripts/*.sh
+      - run: ./scripts/validate.sh
+  browser:
+    name: Real-browser flow test (Chromium)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r backend/requirements-dev.txt -r tests/e2e/requirements.txt
+      - run: playwright install --with-deps chromium
+      - run: ./scripts/browser.sh test
